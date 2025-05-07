@@ -103,7 +103,7 @@ pytest --cov=user_manager --cov-report=html
 
 ## Pasos de la Práctica
 
-1. Empieza por comprender el módulo `user_manager.py` y su funcionalidad.
+1. Empieza por comprender el módulo `user_manager.py` y **completar su funcionalidad**.
 2. Examina las pruebas básicas en `test_user_manager.py` que verifican la funcionalidad principal.
 3. Analiza pruebas más avanzadas que utilizan parametrización, accesorios y simulaciones.
 4. Estudia el archivo `conftest.py` para comprender los accesorios globales y la configuración.
