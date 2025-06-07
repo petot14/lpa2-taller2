@@ -1,68 +1,38 @@
 """
 Pruebas unitarias para la clase UserManager.
 
-Este archivo muestra las características y las mejores prácticas de pytest, incluyendo:
-- Fixtures (facilitadores) y alcances de las pruebas
-- Pruebas parametrizadas
-- Pruebas de casos extremos
-- Simulación
-- Organización de las pruebas
-- Cobertura de las pruebas para diferentes escenarios
 """
 
 import pytest
 import re
-from datetime import datetime, timedelta
+
+from datetime import datetime , timedelta
 from unittest.mock import patch, MagicMock
 from user_manager import UserManager, User
 
-
-# ---- FIXTURES ----
-
 @pytest.fixture
 def user_manager():
-    """
-    Create a fresh UserManager instance for each test that uses this fixture.
-    This is a function-scoped fixture (default).
-    """
+    """Retorna una instancia nueva de UserManager por prueba."""
     return UserManager()
 
 
 @pytest.fixture
 def populated_user_manager():
-    """
-    Create a UserManager with some pre-populated users for testing.
-    """
+    """Retorna una instancia de UserManager con usuarios predefinidos."""
     manager = UserManager()
-    
-    # Add a regular user
-    manager.create_user(
-        username="testuser", 
-        email="test@example.com", 
-        password="Password123"
-    )
-    
-    # Add an admin user
-    manager.create_user(
-        username="admin", 
-        email="admin@example.com", 
-        password="AdminPass123", 
-        role="admin"
-    )
-    
-    # Add an inactive user
-    user = manager.create_user(
-        username="inactive", 
-        email="inactive@example.com", 
-        password="Inactive123"
-    )
+
+    manager.create_user("testuser", "test@example.com", "Password123")
+    manager.create_user("admin", "admin@example.com", "AdminPass123", role="admin")
+    inactive = manager.create_user("inactive", "inactive@example.com", "Inactive123")
     manager.update_user("inactive", is_active=False)
-    
+
+>>>>>>> a49405b (commit f)
     return manager
 
 
 @pytest.fixture(scope="module")
 def module_user_manager():
+<<<<<<< HEAD
     """
     A module-scoped fixture that creates the UserManager only once for the entire module.
     This demonstrates different fixture scopes.
@@ -146,12 +116,57 @@ class TestUserCreation:
         assert len(user_manager.users) == 0
         
     @pytest.mark.parametrize("password, expected_message", [
+=======
+    """Fixture con alcance de módulo (una vez por módulo)."""
+    print("\nCreando UserManager de módulo")
+    manager = UserManager()
+    yield manager
+    print("\nLimpiando UserManager de módulo")
+
+
+# --------------------
+# PRUEBAS DE CREACIÓN
+# --------------------
+
+class TestUserCreation:
+
+    def test_crear_usuario_valido(self, user_manager):
+        user = user_manager.create_user("alice", "alice@example.com", "SecurePass123")
+        assert isinstance(user, User)
+        assert user.username == "alice"
+        assert user.email == "alice@example.com"
+        assert user.role == "user"
+        assert user.is_active is True
+        assert user.last_login is None
+        assert isinstance(user.created_at, datetime)
+
+    def test_crear_usuario_con_rol(self, user_manager):
+        user = user_manager.create_user("bob", "bob@example.com", "SecurePass123", role="admin")
+        assert user.role == "admin"
+
+    def test_usuario_duplicado(self, user_manager):
+        user_manager.create_user("charlie", "charlie@example.com", "SecurePass123")
+        result = user_manager.create_user("charlie", "other@example.com", "OtherPass123")
+        assert result == "Username already exists"
+        assert len(user_manager.users) == 1
+
+    @pytest.mark.parametrize("email_invalido", [
+        "invalid_email", "user@", "@domain.com", "user@domain", "", None
+    ])
+    def test_crear_usuario_con_email_invalido(self, user_manager, email_invalido):
+        result = user_manager.create_user("test_user", email_invalido, "SecurePass123")
+        assert result == "Invalid email format"
+        assert len(user_manager.users) == 0
+
+    @pytest.mark.parametrize("password, esperado", [
+>>>>>>> a49405b (commit f)
         ("short", "Password must be at least 8 characters long"),
         ("lowercase123", "Password must contain at least one uppercase letter"),
         ("UPPERCASE123", "Password must contain at least one lowercase letter"),
         ("NoDigitsHere", "Password must contain at least one digit"),
         ("Valid123", "ok")
     ])
+<<<<<<< HEAD
     def test_password_strength_validation(self, user_manager, password, expected_message):
         """Test password strength validation with various passwords."""
         if expected_message == "ok":
@@ -178,10 +193,23 @@ class TestUserCreation:
             role="superuser"  # Not a valid role
         )
         
+=======
+    def test_validacion_de_password(self, user_manager, password, esperado):
+        if esperado == "ok":
+            user = user_manager.create_user("test_user", "valid@example.com", password)
+            assert isinstance(user, User)
+        else:
+            result = user_manager.create_user("test_user", "valid@example.com", password)
+            assert result == esperado
+
+    def test_crear_usuario_con_rol_invalido(self, user_manager):
+        result = user_manager.create_user("test_user", "valid@example.com", "SecurePass123", role="superuser")
+>>>>>>> a49405b (commit f)
         assert result == "Invalid role"
         assert len(user_manager.users) == 0
 
 
+<<<<<<< HEAD
 class TestUserRetrieval:
     """Tests for user retrieval functionality."""
     
@@ -321,10 +349,98 @@ class TestUserUpdates:
         assert isinstance(result, User)
         assert result.email == "updated@example.com"
         assert result.password == "UpdatedPass123"
+=======
+# --------------------
+# PRUEBAS DE RECUPERACIÓN
+# --------------------
+
+class TestUserRetrieval:
+
+    def test_recuperar_usuario_existente(self, populated_user_manager):
+        user = populated_user_manager.get_user("testuser")
+        assert user is not None
+        assert user.username == "testuser"
+
+    def test_recuperar_usuario_inexistente(self, populated_user_manager):
+        user = populated_user_manager.get_user("ghost")
+        assert user is None
+
+    def test_listar_todos_los_usuarios(self, populated_user_manager):
+        users = populated_user_manager.list_users()
+        assert len(users) == 3
+        assert {"testuser", "admin", "inactive"} == {u.username for u in users}
+
+    def test_listar_usuarios_activos(self, populated_user_manager):
+        users = populated_user_manager.list_users(active_only=True)
+        assert len(users) == 2
+        assert "inactive" not in [u.username for u in users]
+
+
+# --------------------
+# PRUEBAS DE AUTENTICACIÓN
+# --------------------
+
+class TestUserAuthentication:
+
+    def test_autenticacion_exitosa(self, populated_user_manager):
+        user = populated_user_manager.authenticate("testuser", "Password123")
+        assert isinstance(user, User)
+        assert user.last_login is not None
+
+    def test_autenticacion_usuario_inexistente(self, populated_user_manager):
+        result = populated_user_manager.authenticate("ghost", "password")
+        assert result == "Invalid username or password"
+
+    def test_autenticacion_contraseña_incorrecta(self, populated_user_manager):
+        result = populated_user_manager.authenticate("testuser", "wrongpass")
+        assert result == "Invalid username or password"
+
+    def test_autenticacion_usuario_inactivo(self, populated_user_manager):
+        result = populated_user_manager.authenticate("inactive", "Inactive123")
+        assert result == "Account is inactive"
+
+
+# --------------------
+# PRUEBAS DE ACTUALIZACIÓN
+# --------------------
+
+class TestUserUpdates:
+
+    def test_actualizar_email(self, populated_user_manager):
+        result = populated_user_manager.update_user("testuser", email="nuevo@example.com")
+        assert isinstance(result, User)
+        assert result.email == "nuevo@example.com"
+
+    def test_actualizar_usuario_inexistente(self, populated_user_manager):
+        result = populated_user_manager.update_user("ghost", email="x@example.com")
+        assert result == "User not found"
+
+    def test_actualizar_email_invalido(self, populated_user_manager):
+        result = populated_user_manager.update_user("testuser", email="correo")
+        assert result == "Invalid email format"
+
+    def test_actualizar_password_valido(self, populated_user_manager):
+        result = populated_user_manager.update_user("testuser", password="NuevaPass123")
+        assert isinstance(result, User)
+        auth = populated_user_manager.authenticate("testuser", "NuevaPass123")
+        assert isinstance(auth, User)
+
+    def test_actualizar_password_debil(self, populated_user_manager):
+        result = populated_user_manager.update_user("testuser", password="123")
+        assert result == "Password must be at least 8 characters long"
+
+    def test_actualizar_campos_multiples(self, populated_user_manager):
+        result = populated_user_manager.update_user(
+            "testuser", email="x@x.com", password="StrongPass123", is_active=False, role="admin"
+        )
+        assert isinstance(result, User)
+        assert result.email == "x@x.com"
+>>>>>>> a49405b (commit f)
         assert result.is_active is False
         assert result.role == "admin"
 
 
+<<<<<<< HEAD
 class TestUserDeletion:
     """Tests for user deletion functionality."""
     
@@ -381,10 +497,49 @@ class TestWithPatching:
                 password="ValidPass123"
             )
             
+=======
+# --------------------
+# PRUEBAS DE ELIMINACIÓN
+# --------------------
+
+class TestUserDeletion:
+
+    def test_eliminar_usuario_existente(self, populated_user_manager):
+        cantidad = len(populated_user_manager.users)
+        result = populated_user_manager.delete_user("testuser")
+        assert result is True
+        assert len(populated_user_manager.users) == cantidad - 1
+
+    def test_eliminar_usuario_inexistente(self, populated_user_manager):
+        cantidad = len(populated_user_manager.users)
+        result = populated_user_manager.delete_user("ghost")
+        assert result is False
+        assert len(populated_user_manager.users) == cantidad
+
+
+# --------------------
+# PRUEBAS CON MOCKS
+# --------------------
+
+class TestWithPatching:
+
+    @patch("user_manager.datetime")
+    def test_timestamp_creacion_usuario(self, mock_datetime, user_manager):
+        mock_now = datetime(2023, 1, 1, 12, 0, 0)
+        mock_datetime.now.return_value = mock_now
+        user = user_manager.create_user("fecha", "fecha@example.com", "TimePass123")
+        assert user.created_at == mock_now
+        assert mock_datetime.now.called
+
+    def test_mock_regex_email_invalido(self, user_manager):
+        with patch("re.match", return_value=None) as mock_match:
+            result = user_manager.create_user("regex", "valido@example.com", "Password123")
+>>>>>>> a49405b (commit f)
             assert result == "Invalid email format"
             mock_match.assert_called_once()
 
 
+<<<<<<< HEAD
 # ---- BOUNDARY AND EDGE CASES ----
 
 @pytest.mark.parametrize("test_input, expected", [
@@ -421,10 +576,41 @@ def test_exception_handling():
     # Create a mock that raises an exception when used
     with patch('re.match', side_effect=Exception("Simulated error")):
         # The method should handle the exception gracefully
+=======
+# --------------------
+# CASOS LÍMITE DE EMAIL
+# --------------------
+
+@pytest.mark.parametrize("email, valido", [
+    ("a" * 100 + "@example.com", True),
+    ("user@" + "a" * 100 + ".com", True),
+    ("user+tag@example.com", True),
+    ("user.name@example.com", True),
+    ("user-name@example.com", True),
+    ("user_name@example.com", True),
+    ("user@sub.domain.com", True),
+    ("user@domain@example.com", False),
+    (".user@example.com", False),
+    ("user.@example.com", False),
+    ("user..name@example.com", False)
+])
+def test_email_edge_cases(user_manager, email, valido):
+    assert user_manager._is_valid_email(email) == valido
+
+
+# --------------------
+# MANEJO DE EXCEPCIONES
+# --------------------
+
+def test_manejo_de_excepciones():
+    manager = UserManager()
+    with patch("re.match", side_effect=Exception("Simulado")):
+>>>>>>> a49405b (commit f)
         with pytest.raises(Exception):
             manager._is_valid_email("test@example.com")
 
 
+<<<<<<< HEAD
 # ---- DYNAMIC TEST GENERATION ----
 
 def get_test_cases():
@@ -469,10 +655,46 @@ def test_with_db_connection_fixture(db_connection):
     """Test using a fixture with setup and teardown."""
     assert db_connection.is_connected()
     # Perform some operations with the connection
+=======
+# --------------------
+# PRUEBA DINÁMICA
+# --------------------
+
+def generar_passwords():
+    cases = []
+    for i in range(5, 12):
+        pwd = "A" + "a" * (i - 2) + "1"
+        expected = "ok" if i >= 8 else "Password must be at least 8 characters long"
+        cases.append((pwd, expected))
+    return cases
+
+@pytest.mark.parametrize("password, esperado", generar_passwords())
+def test_password_dinamico(user_manager, password, esperado):
+    result = user_manager._check_password_strength(password)
+    assert result == esperado
+
+
+# --------------------
+# SETUP Y TEARDOWN
+# --------------------
+
+@pytest.fixture
+def db_connection():
+    print("\nConectando a base de datos ficticia")
+    conn = MagicMock()
+    conn.is_connected.return_value = True
+    yield conn
+    print("\nCerrando conexión ficticia")
+    conn.close()
+
+def test_conexion_base_datos(db_connection):
+    assert db_connection.is_connected()
+>>>>>>> a49405b (commit f)
     db_connection.execute("SELECT * FROM users")
     assert db_connection.execute.called
 
 
+<<<<<<< HEAD
 # ---- PERFORMANCE TESTS ----
 
 @pytest.mark.slow
@@ -575,3 +797,105 @@ def test_fixture_dependency_injection(second_fixture):
     # second_fixture should be 15 (10 + 5)
     assert second_fixture == 15
 
+=======
+# --------------------
+# PRUEBAS DE RENDIMIENTO
+# --------------------
+
+@pytest.mark.slow
+def test_performance_usuarios():
+    import time
+    manager = UserManager()
+    start = time.time()
+    for i in range(100):
+        manager.create_user(f"user{i}", f"user{i}@test.com", f"Password{i}123")
+    tiempo_creacion = time.time() - start
+
+    start = time.time()
+    users = manager.list_users()
+    tiempo_listado = time.time() - start
+
+    print(f"\nCrear 100 usuarios: {tiempo_creacion:.4f}s")
+    print(f"Listar usuarios: {tiempo_listado:.4f}s")
+
+    assert len(users) == 100
+    assert tiempo_creacion < 1.0
+    assert tiempo_listado < 0.1
+
+
+# --------------------
+# SKIPS Y EXPECTED FAILURES
+# --------------------
+
+@pytest.mark.skip(reason="Ejemplo de test omitido")
+def test_omitido():
+    assert False
+
+@pytest.mark.skipif(datetime.now().weekday() >= 5, reason="Se omite en fines de semana")
+def test_dia_laboral():
+    assert datetime.now().weekday() < 5
+
+@pytest.mark.xfail(reason="Demostración de fallo esperado")
+def test_fallo_esperado():
+    assert 1 == 2
+
+
+# --------------------
+# LIMPIEZA CON CONTEXTOS
+# --------------------
+
+@pytest.fixture
+def recurso_contexto():
+    print("\nAdquiriendo recurso")
+    recurso = MagicMock()
+    yield recurso
+    print("\nLiberando recurso")
+    recurso.release()
+
+def test_recurso_con_contexto(recurso_contexto):
+    recurso_contexto.use()
+    assert recurso_contexto.use.called
+
+
+# --------------------
+# FIXTURES DEPENDIENTES
+# --------------------
+
+@pytest.fixture
+def primer_fixture():
+    return 10
+
+@pytest.fixture
+def segundo_fixture(primer_fixture):
+    return primer_fixture + 5
+
+def test_dependencia_fixtures(segundo_fixture):
+    assert segundo_fixture == 15
+class TestUserManagerNewFunctions:
+
+    def test_deactivate_inactive_users(self, populated_user_manager):
+        # Activa a todos los usuarios para testear
+        for u in populated_user_manager.users.values():
+            u.is_active = True
+            u.last_login = datetime.now() - timedelta(days=10)
+
+        # Desactiva usuarios que no hayan iniciado sesión en los últimos 5 días
+        desactivados = populated_user_manager.deactivate_inactive_users(5)
+
+        assert desactivados == len(populated_user_manager.users)
+        for user in populated_user_manager.users.values():
+            assert user.is_active is False
+
+        # Si llamamos otra vez, no desactiva nada porque ya están inactivos
+        desactivados_2 = populated_user_manager.deactivate_inactive_users(5)
+        assert desactivados_2 == 0
+
+    def test_get_users_by_role(self, populated_user_manager):
+        admins = populated_user_manager.get_users_by_role("admin")
+        users = populated_user_manager.get_users_by_role("user")
+        no_role = populated_user_manager.get_users_by_role("nonexistent")
+
+        assert all(user.role == "admin" for user in admins)
+        assert all(user.role == "user" for user in users)
+        assert no_role == []
+>>>>>>> a49405b (commit f)
